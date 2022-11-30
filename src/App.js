@@ -1,5 +1,6 @@
 import {Component} from 'react'
 import ImagesDisplay from './components/ImagesDisplay'
+import ResultCard from './components/ResultCard'
 import './App.css'
 
 // These are the lists used in the application. You can move them to any component needed.
@@ -8,7 +9,7 @@ const tabsList = [
   {tabId: 'ANIMAL', displayText: 'Animals'},
   {tabId: 'PLACE', displayText: 'Places'},
 ]
-const imagesList = [
+const allImagesList = [
   {
     id: 'b11ec8ce-35c9-4d67-a7f7-07516d0d8186',
     imageUrl:
@@ -250,48 +251,131 @@ const imagesList = [
 
 // Replace your code here
 class App extends Component {
-  state = {activeTabId: tabsList[0].tabId}
+  state = {
+    activeTabId: tabsList[0].tabId,
+    score: 0,
+    timer: 60,
+    activeBigImageDetails: allImagesList[0],
+    gameCompleted: false,
+  }
+
+  componentDidMount() {
+    this.timerId = setInterval(this.runGameTimer, 1000)
+  }
+
+  componentWillUnmount() {
+    clearInterval(this.timerId)
+  }
+
+  runGameTimer = () => {
+    const {timer} = this.state
+    if (timer === 0) {
+      clearInterval(this.timerId)
+      this.setState({gameCompleted: true})
+    } else {
+      this.setState(prevState => ({
+        timer: prevState.timer - 1,
+      }))
+    }
+  }
+
+  restartGame = () => {
+    this.setState({gameCompleted: false, score: 0, timer: 60})
+    this.componentDidMount()
+  }
+
+  //   getShuffledBigImage = () => {
+  //     const shuffledImagesList = allImagesList.sort(() => Math.random() - 0.551)
+  //     return shuffledImagesList[5]
+  //   }
+
+  getShuffledBigImage = () => {
+    const randomIndex = Math.floor(Math.random() * allImagesList.length)
+    return allImagesList[randomIndex]
+  }
+
+  verifyImageMatch = imageId => {
+    const {activeBigImageDetails} = this.state
+
+    if (activeBigImageDetails.id === imageId) {
+      this.setState(prevState => ({
+        score: prevState.score + 1,
+        activeBigImageDetails: this.getShuffledBigImage(),
+      }))
+    } else {
+      console.log('images not matched')
+      clearInterval(this.timerId)
+      this.setState({gameCompleted: true, timer: 0})
+    }
+  }
 
   updateTabId = tabId => this.setState({activeTabId: tabId})
 
   displayTabImages = tabId =>
-    imagesList.filter(eachImageItem => eachImageItem.category === tabId)
+    allImagesList.filter(eachImageItem => eachImageItem.category === tabId)
 
   render() {
-    const {activeTabId} = this.state
+    const {
+      activeTabId,
+      score,
+      timer,
+      gameCompleted,
+      activeBigImageDetails,
+    } = this.state
     const presentTabImagesList = this.displayTabImages(activeTabId)
+    // console.log(activeBigImageDetails)
     return (
-      <div className="home-container">
-        <nav className="nav-bar">
-          <img
-            src="https://assets.ccbp.in/frontend/react-js/match-game-website-logo.png"
-            alt="website logo"
-            className="game-logo"
-          />
-          <div className="score-and-timer-container">
-            <p className="score-text">
-              Score:
-              <span className="score-count"> 0</span>
-            </p>
-            <div className="clock-icon-and-timer-container">
-              <img
-                src="https://assets.ccbp.in/frontend/react-js/match-game-timer-img.png"
-                alt="timer"
-                className="clock-icon"
-              />
-              <p className="timer-count">60 sec</p>
-            </div>
+      <>
+        <div className="home-container">
+          <nav className="nav-bar">
+            <ul className="nav-bar-items-container">
+              <li>
+                <img
+                  src="https://assets.ccbp.in/frontend/react-js/match-game-website-logo.png"
+                  alt="website logo"
+                  className="game-logo"
+                />
+              </li>
+              <li className="score-and-timer-container">
+                <p className="score-text">
+                  Score:
+                  <span className="score-count"> {score}</span>
+                </p>
+                <div className="clock-icon-and-timer-container">
+                  <img
+                    src="https://assets.ccbp.in/frontend/react-js/match-game-timer-img.png"
+                    alt="timer"
+                    className="clock-icon"
+                  />
+                  <p className="timer-count">{timer} sec</p>
+                </div>
+              </li>
+            </ul>
+          </nav>
+
+          <div className="bottom-container">
+            {!gameCompleted ? (
+              <div className="game-display-container">
+                <p className="game-instruction">
+                  Rule: Match images to score..!!
+                </p>
+                <ImagesDisplay
+                  tabsList={tabsList}
+                  imagesList={presentTabImagesList}
+                  activeTabId={activeTabId}
+                  updateTabId={this.updateTabId}
+                  verifyImageMatch={this.verifyImageMatch}
+                  activeBigImageDetails={activeBigImageDetails}
+                />
+              </div>
+            ) : (
+              <div className="result-card-display-container">
+                <ResultCard score={score} restartGame={this.restartGame} />
+              </div>
+            )}
           </div>
-        </nav>
-        <div className="game-display-container">
-          <ImagesDisplay
-            tabsList={tabsList}
-            imagesList={presentTabImagesList}
-            activeTabId={activeTabId}
-            updateTabId={this.updateTabId}
-          />
         </div>
-      </div>
+      </>
     )
   }
 }
